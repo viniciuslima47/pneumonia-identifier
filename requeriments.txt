@@ -3,3 +3,4 @@ tensorflow-cpu
 numpy
 Pillow
 requests
+huggingface-hub
