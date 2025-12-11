@@ -93,7 +93,9 @@ else:
 if st.checkbox("Mostrar Histórico de Uso"):
     st.markdown("### Registros do Banco de Dados")
     rows = cur.execute("SELECT * FROM historico ORDER BY id DESC").fetchall()
+    
     df = pd.DataFrame(rows, columns=["ID", "Resultado", "Probabilidade", "Nome do Arquivo"])
+
     st.dataframe(
         df,
         use_container_width=True
