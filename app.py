@@ -3,54 +3,49 @@ import sqlite3
 import tensorflow as tf
 import numpy as np
 from PIL import Image
-import requests
 import os
-import io
+from huggingface_hub import hf_hub_download
 
 # --- Configurações do Modelo e Banco de Dados ---
-MODEL_ID = "1_nT9nibatPXxcqEKFocFClpSeST5mUH9"
-MODEL_URL = f"https://drive.google.com/uc?export=download&id={MODEL_ID}"
-MODEL_FILENAME = "modelo_vgg.h5"
+REPO_ID = "viniciuslima47/pneumonia-vgg-model" # Seu repositório no Hugging Face
+MODEL_FILENAME = "final_vgg16_model.h5"
+# MODEL_PATH não é mais necessário aqui, pois hf_hub_download retorna o caminho
 
-
-# 1. Função para Baixar o Modelo
+# 1. Função para Baixar e Carregar o Modelo
+# O st.cache_resource garante que o download e o carregamento do modelo só ocorram uma vez.
 @st.cache_resource
 def load_and_cache_model():
-    """Baixa o modelo do Drive (se não existir) e o carrega."""
+    """Baixa o modelo do Hugging Face Hub (se não existir) e o carrega."""
     
-    if not os.path.exists(MODEL_FILENAME):
-        st.info("Baixando o modelo grande do Google Drive pela primeira vez... Isso pode levar alguns segundos.")
-        
-        try:
-            response = requests.get(MODEL_URL, stream=True)
-            response.raise_for_status()
-
-            total_size = int(response.headers.get('content-length', 0))
-            if total_size == 0:
-                 st.error("Erro ao baixar. O link pode não ser de acesso público/direto.")
-                 return None
-
-            with open(MODEL_FILENAME, "wb") as f:
-                progress_bar = st.progress(0, text=f"Baixando {MODEL_FILENAME}...")
-                downloaded_size = 0
-                for chunk in response.iter_content(chunk_size=8192):
-                    f.write(chunk)
-                    downloaded_size += len(chunk)
-                    progress = min(int((downloaded_size / total_size) * 100), 100)
-                    progress_bar.progress(progress, text=f"Baixando {MODEL_FILENAME} ({progress}%)")
-                progress_bar.empty()
-            
-            st.success("Modelo baixado com sucesso!")
-
-        except requests.exceptions.RequestException as e:
-            st.error(f"Erro de conexão ao tentar baixar o modelo: {e}")
-            return None
-        
+    # 1. Obter o Token
+    # O HF_TOKEN deve ser configurado nas Streamlit Secrets
     try:
-        model = tf.keras.models.load_model(MODEL_FILENAME)
+        hf_token = st.secrets["HF_TOKEN"]
+    except KeyError:
+        st.error("Erro: A chave secreta 'HF_TOKEN' não está configurada no Streamlit Secrets.")
+        return None
+
+    st.info(f"Baixando e carregando o modelo grande do Hugging Face Hub ({MODEL_FILENAME})...")
+    
+    try:
+        # 2. Baixar o arquivo e armazená-lo em cache localmente no sistema do Streamlit Cloud
+        # O hf_hub_download gerencia o cache. Ele só baixa se não existir.
+        downloaded_path = hf_hub_download(
+            repo_id=REPO_ID,
+            filename=MODEL_FILENAME,
+            token=hf_token  # Usa o token para acesso
+        )
+        st.success("Download do modelo concluído. Carregando Keras...")
+
+        # 3. Carregar o modelo Keras a partir do caminho baixado
+        # 
+        model = tf.keras.models.load_model(downloaded_path)
         return model
+        
     except Exception as e:
-        st.error(f"Erro ao carregar o modelo Keras: {e}")
+        # Erro genérico de download/carregamento
+        st.error(f"Erro ao baixar ou carregar o modelo. Verifique o REPO_ID, o nome do arquivo e o token.")
+        st.code(f"Detalhes do Erro: {e}")
         return None
 
 # Carrega o modelo.
