@@ -1,6 +1,6 @@
 streamlit
-tensorflow-cpu==2.15.0
 numpy
 Pillow
 requests
 huggingface-hub
+tensorflow==2.11.0
