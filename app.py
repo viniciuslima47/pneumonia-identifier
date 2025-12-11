@@ -6,13 +6,11 @@ from PIL import Image
 from huggingface_hub import hf_hub_download
 import os
 
-# --- Configurações do Repositório ---
-# Substitua pelo SEU REPOSITÓRIO (se for diferente)
+# --- Configuração Repositório ---
 REPO_ID = "viniciuslima47/pneumonia-vgg-model" 
-MODEL_FILENAME = "modelo_pneumonia.onnx" # O arquivo ONNX
+MODEL_FILENAME = "modelo_pneumonia.onnx"
 
-# --- Configuração do Banco de Dados SQLite ---
-# Este banco de dados 'usos.db' será criado automaticamente no Space
+# --- Configuração BD ---
 conn = sqlite3.connect("usos.db")
 cur = conn.cursor()
 cur.execute("""CREATE TABLE IF NOT EXISTS historico (
@@ -29,11 +27,8 @@ def load_onnx_model():
     """Baixa e carrega o modelo ONNX usando onnxruntime."""
     try:
         st.info(f"Baixando modelo {MODEL_FILENAME}...")
-        
-        # 1. Baixa o arquivo ONNX do Hugging Face Hub (usando cache)
         model_path = hf_hub_download(repo_id=REPO_ID, filename=MODEL_FILENAME)
-        
-        # 2. Inicia a sessão de inferência do ONNX
+
         session = ort.InferenceSession(model_path)
         st.success("Modelo ONNX carregado com sucesso!")
         return session
@@ -61,17 +56,14 @@ else:
         if st.button("Analisar Raio-X"):
             with st.spinner('Processando imagem...'):
                 try:
-                    # 1. Pré-processamento (Igual ao VGG16)
                     img_resized = img.resize((224, 224))
                     img_array = np.array(img_resized).astype(np.float32)
-                    img_array /= 255.0 # Normalização
-                    img_array = np.expand_dims(img_array, axis=0) # Adiciona dimensão de batch
+                    img_array /= 255.0
+                    img_array = np.expand_dims(img_array, axis=0)
 
-                    # 2. Inferência via ONNX Runtime
                     input_name = session.get_inputs()[0].name
                     outputs = session.run(None, {input_name: img_array})
-                    
-                    # Assume saída de uma única probabilidade (0 a 1)
+
                     prob = float(outputs[0][0][0])
                     
                     # 3. Definição do Resultado
@@ -98,11 +90,11 @@ else:
                     st.error(f"Erro durante o processamento (Inferência): {e}")
 
 # --- Seção de Histórico ---
-st.divider()
 if st.checkbox("Mostrar Histórico de Uso"):
     st.markdown("### Registros do Banco de Dados")
-    data = cur.execute("SELECT * FROM historico ORDER BY id DESC").fetchall()
-    st.dataframe(data, use_container_width=True, hide_index=True,
-                 column_config={
-                     0: "ID", 1: "Resultado", 2: "Probabilidade", 3: "Nome do Arquivo"
-                 })
+    rows = cur.execute("SELECT * FROM historico ORDER BY id DESC").fetchall()
+    df = pd.DataFrame(rows, columns=["ID", "Resultado", "Probabilidade", "Nome do Arquivo"])
+    st.dataframe(
+        df,
+        use_container_width=True
+    )
