@@ -5,6 +5,7 @@ import sqlite3
 from PIL import Image
 from huggingface_hub import hf_hub_download
 import os
+import pandas as pd
 
 # --- Configuração Repositório ---
 REPO_ID = "viniciuslima47/pneumonia-vgg-model" 
