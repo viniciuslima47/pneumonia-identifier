@@ -3,4 +3,5 @@ numpy
 Pillow
 requests
 huggingface-hub
-onnxruntime==1.17.3
+onnxruntime-cpu  # Força o pacote de CPU
+# V01-20251211-INSTALL-FIX
