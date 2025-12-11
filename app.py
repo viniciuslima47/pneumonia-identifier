@@ -22,7 +22,7 @@ cur.execute("""CREATE TABLE IF NOT EXISTS historico (
               )""")
 conn.commit()
 
-# --- Função de Carregamento do Modelo (ONNX) ---
+# --- Carregar ONNX ---
 @st.cache_resource
 def load_onnx_model():
     """Baixa e carrega o modelo ONNX usando onnxruntime."""
@@ -38,7 +38,7 @@ def load_onnx_model():
         st.caption(f"Verifique o REPO_ID ({REPO_ID}), se o arquivo ONNX está no repo, e se o setup.sh foi executado.")
         return None
 
-# Carrega o modelo na inicialização
+# Carregar o modelo qnd iniciar
 session = load_onnx_model()
 
 # --- Interface do Streamlit ---
@@ -67,7 +67,7 @@ else:
 
                     prob = float(outputs[0][0][0])
                     
-                    # 3. Definição do Resultado
+                    # Resultado
                     pred = "Pneumonia" if prob > 0.5 else "Normal"
                     
                     st.success("Análise concluída!")
@@ -82,7 +82,7 @@ else:
                     with col2:
                         st.metric(label="Confiança do Modelo", value=f"{prob:.4f}")
 
-                    # 4. Salvar no Banco de Dados SQLite
+                    # Salvar no Banco de Dados
                     cur.execute("INSERT INTO historico (resultado, prob, filename) VALUES (?, ?, ?)",
                                 (pred, prob, uploaded.name))
                     conn.commit()
@@ -90,7 +90,7 @@ else:
                 except Exception as e:
                     st.error(f"Erro durante o processamento (Inferência): {e}")
 
-# --- Seção de Histórico ---
+# --- Histórico ---
 if st.checkbox("Mostrar Histórico de Uso"):
     st.markdown("### Registros do Banco de Dados")
     rows = cur.execute("SELECT * FROM historico ORDER BY id DESC").fetchall()
